@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Restaurante</title>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1, h2 {
+            margin-top: 40px;
+        }
+
+        .kpis {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .kpi {
+            border: 1px solid #ccc;
+            padding: 15px;
+            min-width: 180px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: center;
+        }
+
+        canvas {
+            max-width: 600px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📊 Dashboard Restaurante</h1>
+
+<p id="infoFilas"></p>
+
+<h2>KPIs</h2>
+<div class="kpis">
+    <div class="kpi" id="kpiVentas"></div>
+    <div class="kpi" id="kpiUnidades"></div>
+</div>
+
+<h2>Gráficos</h2>
+<canvas id="chartTopProductos"></canvas>
+<canvas id="chartFranja"></canvas>
+<canvas id="chartFamilia"></canvas>
+
+<h2>Primeras 10 filas RAW</h2>
+<table id="tablaRaw"></table>
+
+<h2>Primeras 10 filas LIMPIAS</h2>
+<table id="tablaClean"></table>
+
+<button id="downloadBtn">⬇ Descargar CSV limpio</button>
+
+<script src="app.js"></script>
+</body>
+</html>
