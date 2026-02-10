@@ -1,5 +1,5 @@
 // Cargar el CSV al iniciar
-fetch("ventas_raw.csv")
+fetch(".ventas_raw.csv")
     .then(res => res.text())
     .then(text => procesarCSV(text));
 
