@@ -1,0 +1,198 @@
+// Cargar el CSV al iniciar
+fetch("ventas_raw.csv")
+    .then(res => res.text())
+    .then(text => procesarCSV(text));
+
+function procesarCSV(texto) {
+    const filas = texto.trim().split("\n");
+    const headers = filas[0].split(",");
+
+    const datosRaw = filas.slice(1).map(fila => {
+        const valores = fila.split(",");
+        let obj = {};
+        headers.forEach((h, i) => obj[h.trim()] = valores[i]?.trim());
+        return obj;
+    });
+
+    mostrarInfoFilas(datosRaw.length, null);
+    mostrarTabla("tablaRaw", datosRaw.slice(0, 10));
+
+    const datosClean = limpiarDatos(datosRaw);
+
+    mostrarInfoFilas(datosRaw.length, datosClean.length);
+    mostrarTabla("tablaClean", datosClean.slice(0, 10));
+
+    calcularKPIs(datosClean);
+    crearGraficos(datosClean);
+    prepararDescarga(datosClean);
+}
+
+// Limpieza de datos
+function limpiarDatos(datos) {
+    const vistos = new Set();
+    const resultado = [];
+
+    datos.forEach(d => {
+        const fecha = new Date(d.fecha);
+        if (isNaN(fecha)) return;
+
+        let franja = d.franja?.toLowerCase();
+        franja = franja?.includes("desa") ? "Desayuno" :
+                 franja?.includes("com") ? "Comida" : null;
+        if (!franja) return;
+
+        let familia = d.familia?.toLowerCase();
+        familia =
+            familia?.includes("beb") ? "Bebida" :
+            familia?.includes("entr") ? "Entrante" :
+            familia?.includes("prin") ? "Principal" :
+            familia?.includes("post") ? "Postre" : null;
+        if (!familia) return;
+
+        let producto = d.producto?.trim();
+        if (!producto) return;
+        producto = producto.toLowerCase();
+
+        const unidades = Number(d.unidades);
+        const precio = Number(d.precio_unitario);
+        if (unidades <= 0 || precio <= 0) return;
+
+        const importe = unidades * precio;
+
+        const filaNormalizada = {
+            fecha: fecha.toISOString().split("T")[0],
+            franja,
+            producto,
+            familia,
+            unidades,
+            precio_unitario: precio,
+            importe
+        };
+
+        const clave = JSON.stringify(filaNormalizada);
+        if (vistos.has(clave)) return;
+        vistos.add(clave);
+
+        resultado.push(filaNormalizada);
+    });
+
+    return resultado;
+}
+
+// KPIs
+function calcularKPIs(datos) {
+    const ventasTotales = datos.reduce((a, b) => a + b.importe, 0);
+    const unidadesTotales = datos.reduce((a, b) => a + b.unidades, 0);
+
+    document.getElementById("kpiVentas").innerHTML =
+        `<strong>Ventas totales</strong><br>${ventasTotales.toFixed(2)} €`;
+
+    document.getElementById("kpiUnidades").innerHTML =
+        `<strong>Unidades totales</strong><br>${unidadesTotales}`;
+}
+
+// Gráficos
+function crearGraficos(datos) {
+    // Top 5 productos
+    const porProducto = agrupar(datos, "producto");
+    const topProductos = Object.entries(porProducto)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    new Chart(document.getElementById("chartTopProductos"), {
+        type: "bar",
+        data: {
+            labels: topProductos.map(p => p[0]),
+            datasets: [{
+                label: "Importe (€)",
+                data: topProductos.map(p => p[1])
+            }]
+        }
+    });
+
+    // Ventas por franja
+    const porFranja = agrupar(datos, "franja");
+    new Chart(document.getElementById("chartFranja"), {
+        type: "pie",
+        data: {
+            labels: Object.keys(porFranja),
+            datasets: [{
+                data: Object.values(porFranja)
+            }]
+        }
+    });
+
+    // Ventas por familia
+    const porFamilia = agrupar(datos, "familia");
+    new Chart(document.getElementById("chartFamilia"), {
+        type: "pie",
+        data: {
+            labels: Object.keys(porFamilia),
+            datasets: [{
+                data: Object.values(porFamilia)
+            }]
+        }
+    });
+}
+
+// Agrupación por campo
+function agrupar(datos, campo) {
+    return datos.reduce((acc, d) => {
+        acc[d[campo]] = (acc[d[campo]] || 0) + d.importe;
+        return acc;
+    }, {});
+}
+
+// Tablas
+function mostrarTabla(id, datos) {
+    const tabla = document.getElementById(id);
+    tabla.innerHTML = "";
+
+    if (datos.length === 0) return;
+
+    const thead = document.createElement("tr");
+    Object.keys(datos[0]).forEach(k => {
+        const th = document.createElement("th");
+        th.textContent = k;
+        thead.appendChild(th);
+    });
+    tabla.appendChild(thead);
+
+    datos.forEach(fila => {
+        const tr = document.createElement("tr");
+        Object.values(fila).forEach(v => {
+            const td = document.createElement("td");
+            td.textContent = v;
+            tr.appendChild(td);
+        });
+        tabla.appendChild(tr);
+    });
+}
+
+// Info filas
+function mostrarInfoFilas(raw, clean) {
+    const info = document.getElementById("infoFilas");
+    if (clean === null) {
+        info.textContent = `Filas RAW: ${raw}`;
+    } else {
+        info.textContent = `Filas RAW: ${raw} | Filas limpias: ${clean}`;
+    }
+}
+
+// Descargar CSV limpio
+function prepararDescarga(datos) {
+    document.getElementById("downloadBtn").onclick = () => {
+        const headers = Object.keys(datos[0]).join(",");
+        const filas = datos.map(d => Object.values(d).join(","));
+        const csv = [headers, ...filas].join("\n");
+
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "ventas_clean.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+}
