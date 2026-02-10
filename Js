@@ -1,17 +1,17 @@
 // Cargar el CSV al iniciar
-fetch(".ventas_raw.csv")
-    .then(res => res.text())
-    .then(text => procesarCSV(text));
-
-function procesarCSV(texto) {
-    const filas = texto.trim().split("\n");
-    const headers = filas[0].split(",");
-
-    const datosRaw = filas.slice(1).map(fila => {
-        const valores = fila.split(",");
-        let obj = {};
-        headers.forEach((h, i) => obj[h.trim()] = valores[i]?.trim());
-        return obj;
+fetch("./ventas_raw.csv")
+    .then(res => {
+        if (!res.ok) {
+            throw new Error("No se pudo cargar el CSV");
+        }
+        return res.text();
+    })
+    .then(text => procesarCSV(text))
+    .catch(err => {
+        document.body.innerHTML =
+            "<h2>Error cargando ventas_raw.csv</h2>" +
+            "<p>Revisa que el archivo esté en la raíz del repositorio.</p>";
+        console.error(err);
     });
 
     mostrarInfoFilas(datosRaw.length, null);
